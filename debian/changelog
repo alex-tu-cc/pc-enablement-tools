@@ -1,3 +1,9 @@
+pc-enablement-tools (1.1) xenial; urgency=medium
+
+  * refine the build stuff
+
+ -- Alex Tu <alex.tu@canonical.com>  Thu, 18 May 2017 16:50:43 +0800
+
 pc-enablement-tools (1) xenial; urgency=medium
 
   * init
