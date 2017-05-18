@@ -1,0 +1,15 @@
+Source: pc-enablement-tools
+Section: misc
+Priority: optional
+Maintainer: Commercial Engineering <commercial-engineering@canonical.com>
+Build-Depends: debhelper (>= 9), dh-modaliases
+Standards-Version: 3.9.7
+Vcs-Bzr:
+Vcs-Browser:
+
+Package: pc-enablement-tools
+Architecture: all
+Depends: openssh-server, debug-logs-collector, ${misc:Depends}
+XB-Modaliases: ${modaliases}
+Description: pc-enablement-tools
+ pc-enablement-tools
