@@ -9,7 +9,7 @@ Vcs-Browser:
 
 Package: pc-enablement-tools
 Architecture: all
-Depends: openssh-server, debug-logs-collector, ${misc:Depends}
+Depends: vim, tmux, openssh-server, debug-logs-collector, ${misc:Depends}
 XB-Modaliases: ${modaliases}
 Description: pc-enablement-tools
  pc-enablement-tools

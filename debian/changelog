@@ -1,3 +1,9 @@
+pc-enablement-tools (1.2) xenial; urgency=medium
+
+  * add vim, ssh as well
+
+ -- Alex Tu <alex.tu@canonical.com>  Mon, 22 May 2017 11:43:08 +0800
+
 pc-enablement-tools (1.1) xenial; urgency=medium
 
   * refine the build stuff
