@@ -1,0 +1,8 @@
+#!/bin/bash
+
+MAIN_SCRIPT=$HOME/bin/$(echo $0 | )/$0
+# checkout scripts to ~/usr/bin
+if [!  -e $MAIN_SCRIPT ]; then
+    mkdir -p $(dir $MAIN_SCRIPT)
+    
+fi
