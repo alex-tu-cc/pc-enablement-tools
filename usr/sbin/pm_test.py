@@ -18,6 +18,8 @@ from gi.repository import Gtk, GObject
 def main():
     """
     Run power management operation as many times as needed
+    example: reboot 30 times.
+        $ sudo python pm_test -r 30 --log-level=debug --log-dir=./ --pm-delay=15 reboot
     """
     args, extra_args = MyArgumentParser().parse()
 
