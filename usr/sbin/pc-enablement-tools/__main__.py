@@ -4,28 +4,29 @@ import locale
 from dialog import Dialog
 import logging
 from argparse import ArgumentParser
+import sys
+import pdb
 
 
-
-
-
-if __name__ == "__main__":
-    main()
 
 
 def main():
-    parser = ArgumentParser(prog="hungry")
-    parser.add_argument("type", type=str, choices=['view', 'message'])
-    parser.add_argument('-id', '--user_id', type=int)
-    parser.add_argument('-e', '--email', type=str)
+    parser = ArgumentParser(prog="pc_enablemant_tool")
+#    parser.add_argument("type", type=str, choices=['view', 'message'])
+#    parser.add_argument('-id', '--user_id', type=int)
+    parser.add_argument('-i', '--interactive-dialog', dest="interactive_dialog")
+    parser.add_argument('-f', '--log-file', dest="log_file",default="./log")
+    parser.add_argument("-l", "--log", dest="logLevel", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help="Set the logging level")
     
     args = parser.parse_args()
     
-    if args.type == "view":
-        print(read_data(user_id=args.user_id))
-        print(read_data(email=args.email))
-    elif args.type == "message":
-        print("send message")
+    
+    if args.logLevel:
+        logging.basicConfig(level=logging.getLevelName(args.logLevel), filename=args.log_file)
+        logging.info("log in {}".format(args.log_file))
+
+
+    logging.debug("test logging.debug");
 
 
     # This is almost always a good thing to do at the beginning of your programs.
@@ -46,19 +47,21 @@ def main():
     
         # We could put non-empty items here (not only the tag for each entry)
         code, tags = d.checklist("What sandwich toppings do you like?",
-                                 choices=[("Catsup", "",             False),
-                                          ("Mustard", "",            False),
-                                          ("Pesto", "",              False),
-                                          ("Mayonnaise", "",         True),
-                                          ("Horse radish","",        True),
-                                          ("Sun-dried tomatoes", "", True)],
+                                 choices=[("enable serial console", "",             False),
+                                          ("enable modemmanager debug", "",            False)],
                                  title="Do you prefer ham or spam?",
                                  backtitle="And now, for something "
                                  "completely different...")
         if code == d.OK:
             # 'tags' now contains a list of the toppings chosen by the user
-            logging.info("{} choose {}", __NAME__, tags)
+            pdb.set_trace()
+            logging.info("code == d.ok, choose {}".format(tags))
+            logging.info("code == d.ok, choose ???")
             pass
+        else:
+            logging.info("code != d.ok, choose {}".format(tags))
+            logging.info("code != d.ok, choose ???")
+        logging.info("++++++++")
     else:
         code, tag = d.menu("OK, then you have two options:",
                            choices=[("(1)", "Leave this fascinating example"),
@@ -66,3 +69,10 @@ def main():
         if code == d.OK:
             # 'tag' is now either "(1)" or "(2)"
             pass
+
+
+
+
+if __name__ == "__main__":
+    main()
+
