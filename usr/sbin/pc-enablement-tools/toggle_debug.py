@@ -27,9 +27,19 @@ class toggle_debug(object):
 
     def persistent_journal(self, onoff):
         logging.info("toggling {} {}".format("persistent_journal",onoff))
+        target_file="/etc/systemd/journald.conf"
+        with fileinput.FileInput(target_file, inplace=True, backup='.bak') as file:
+            if onoff == "on":
+                for line in file:
+                    print(line.replace("#Storage=auto", 'Storage=persistent'),end='')
+            else:
+               copyfile(target_file+".bak",target_file)
 
     def modemmanager_debug(self, onoff):
         logging.info("toggling {} {}".format("modemmanager_debug",onoff))
+
+
+
 
 def main():
     parser = argparse.ArgumentParser(description='this prog is used to enable debug message for each part')
@@ -44,13 +54,14 @@ def main():
     print("enable: {}".format(args.enable_debug_target));
     td=toggle_debug()
 #    td.serial_console("on");
+    
+    if args.enable_debug_target is not None:
+        for target in  args.enable_debug_target:
+            eval("td.{}(\"on\")".format(target))
 
-    for target in  args.enable_debug_target:
-        print(target)
-        eval("td.{}(\"on\")".format(target))
-#
-#    for target in args.disable_debug_target:
-
+    if args.disable_debug_target is not None:
+        for target in args.disable_debug_target:
+            eval("td.{}(\"off\")".format(target))
 
 
 if __name__ == "__main__":
