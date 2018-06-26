@@ -94,4 +94,4 @@ popd
 
 sudo umount $mnt_folder
 rm -rf $mnt_folder
-notify_local.sh "$0 $iso_name done"
+[ -e $(which zenity) ] && zenity --info --text="$0 $iso_name done"
