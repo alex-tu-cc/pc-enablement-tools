@@ -59,6 +59,7 @@ cd `ls | grep amdgpu`
 cat << EOF > test.sh
 set -x
 cd $test_folder_in_container
+mkdir -p amdgpu-out/deps
 ls -l
 dpkg --add-architecture i386
 apt-get update
@@ -67,14 +68,13 @@ export DEBIAN_FRONTEND=noninteractive
 rm /etc/kernel/postinst.d/zz-update-grub
 yes|apt-get install -y --allow-change-held-packages linux-generic dkms linux-oem tree
 rm -rf /var/cache/apt/archives/*.deb
+set +x
+while [ 1 ]; do rsync /var/cache/apt/archives/*.deb $test_folder_in_container/amdgpu-out/deps/;sleep 10;done &
+set -x
 yes| ./amdgpu-pro-install -y --opencl=legacy,rocm --allow-unauthenticated
-tree /var/lib/dkms/amdgpu
-mkdir amdgpu-out
-cd amdgpu-out
-tar zcf amdgpu.log.tar.gz /var/lib/dkms/amdgpu
-ls -l /var/cache/apt/archives
-tar zcf dependency.tar.gz /var/cache/apt/archives
-find . -name make.log | xargs grep -r Error && touch Fail
+tar -C /var/lib/dkms/amdgpu -zcf $test_folder_in_container/amdgpu-out/amdgpu.log.tar.gz .
+tar -C $test_folder_in_container/amdgpu-out/deps -zcf $test_folder_in_container/amdgpu-out/deps.tar.gz .
+find /var/lib/dkms/amdgpu -name make.log | xargs grep -r Error && touch Fail
 EOF
 
 
