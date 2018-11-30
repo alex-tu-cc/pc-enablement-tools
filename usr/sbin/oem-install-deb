@@ -1,0 +1,68 @@
+#!/bin/bash
+#set -x
+usage() {
+cat << EOF
+usage: $0 options
+
+    -h|--help       print this message
+    --dry-run       dryrun
+    --local-archive specify folder of local archive
+    --deb           specify debian package to instal.
+
+ex. to use /tmp/nvidia and /tmp/common as local archive then install nvidia-410
+    $0 --deb nvidia-410 --local-archive /tmp/nvidia --local-archive /tmp/common
+
+EOF
+exit 1
+}
+DRY_RUN=0
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        -h | --help)
+            usage 0
+            exit 0
+            ;;
+        --dry-run)
+            DRY_RUN=1;
+            ;;
+        --local-archive)
+            shift
+            LOCAL_ARCHIVE="$LOCAL_ARCHIVE $1"
+            ;;
+        --deb)
+            shift
+            TARGET_DEB="$TARGET_DEB $1"
+            ;;
+        *)
+        usage
+       esac
+       shift
+done
+
+function cmd(){
+    if [ $DRY_RUN == 1 ];then
+        echo $@
+    else
+        $@
+    fi
+}
+
+echo $LOCAL_ARCHIVE
+for i in $LOCAL_ARCHIVE;do
+    echo "set local archive /tmp/$i"
+cmd    cp -r $i /tmp
+cmd    pushd /tmp/$i
+cmd        eval "apt-ftparchive packages .  > Packages"
+cmd    popd
+cmd    eval 'echo "deb [ trusted=yes ] file:/tmp/$i /" >> /etc/apt/sources.list.d/$0_$$.list'
+done
+
+cmd apt-get update
+cmd apt-get install -y --allow-unauthenticated $TARGET_DEB
+
+for i in $LOCAL_ARCHIVE;do
+cmd    rm -rf /tmp/$i
+done
+cmd rm /etc/apt/sources.list.d/$0_$$.list
+cmd apt-get update
