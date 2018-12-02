@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -x
 usage() {
 cat << EOF
 usage: $0 options
@@ -8,9 +8,13 @@ usage: $0 options
     --dry-run       dryrun
     --local-archive specify folder of local archive
     --deb           specify debian package to instal.
+    --execute       sepcify what command you want to execute
 
 ex. to use /tmp/nvidia and /tmp/common as local archive then install nvidia-410
     $0 --deb nvidia-410 --local-archive /tmp/nvidia --local-archive /tmp/common
+
+ex. to use /tmp/common as local archive then execute some command to trigger installation.
+    $0 --execute 'yes|amdgpu-pro-install -y --opencl=legacy,pal --allow-unauthenticated --allow-downgrades' --local-archive /tmp/common
 
 EOF
 exit 1
@@ -33,6 +37,10 @@ do
         --deb)
             shift
             TARGET_DEB="$TARGET_DEB $1"
+            ;;
+        --execute)
+            shift
+            COMMAND=$1
             ;;
         *)
         usage
@@ -57,9 +65,11 @@ cmd        eval "apt-ftparchive packages .  > Packages"
 cmd    popd
 cmd    eval 'echo "deb [ trusted=yes ] file:/tmp/$i /" >> /etc/apt/sources.list.d/$0_$$.list'
 done
-
 cmd apt-get update
-cmd apt-get install -y --allow-unauthenticated $TARGET_DEB
+
+
+[ -n "$TARGET_DEB" ] && cmd apt-get install -y --allow-unauthenticated $TARGET_DEB
+[ -n "$COMMAND" ] && cmd $COMMAND
 
 for i in $LOCAL_ARCHIVE;do
 cmd    rm -rf /tmp/$i
