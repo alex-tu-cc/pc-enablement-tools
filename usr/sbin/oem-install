@@ -1,5 +1,7 @@
 #!/bin/bash
 set -x
+
+COMMANDS_FILE=/tmp/$(basename $0)_command
 usage() {
 cat << EOF
 usage: $0 options
@@ -40,39 +42,32 @@ do
             ;;
         --execute)
             shift
-            COMMAND=$1
+	    echo $1 >> $COMMANDS_FILE
             ;;
         *)
         usage
        esac
        shift
 done
-
-function cmd(){
-    if [ $DRY_RUN == 1 ];then
-        echo $@
-    else
-        $@
-    fi
-}
+[[ "$DRY_RUN" == "1" ]] && cmd=echo
 
 echo $LOCAL_ARCHIVE
 for i in $LOCAL_ARCHIVE;do
     echo "set local archive /tmp/$i"
-cmd    cp -r $i /tmp
-cmd    pushd /tmp/$i
-cmd        eval "apt-ftparchive packages .  > Packages"
-cmd    popd
-cmd    eval 'echo "deb [ trusted=yes ] file:/tmp/$i /" >> /etc/apt/sources.list.d/$0_$$.list'
+$cmd    cp -r $i /tmp
+$cmd    pushd /tmp/$(basename $i)
+$cmd        eval "apt-ftparchive packages .  > Packages"
+$cmd    popd
+$cmd    eval 'echo "deb [ trusted=yes ] file:/tmp/$i /" >> /etc/apt/sources.list.d/$(basename $0)_$$.list'
 done
-cmd apt-get update
+$cmd apt-get update
 
 
-[ -n "$TARGET_DEB" ] && cmd apt-get install -y --allow-unauthenticated $TARGET_DEB
-[ -n "$COMMAND" ] && cmd $COMMAND
+[ -n "$TARGET_DEB" ] && $cmd apt-get install -y --allow-unauthenticated $TARGET_DEB
+[ -e $COMMANDS_FILE ] && $cmd bash $COMMANDS_FILE
 
 for i in $LOCAL_ARCHIVE;do
-cmd    rm -rf /tmp/$i
+$cmd    rm -rf /tmp/$i
 done
-cmd rm /etc/apt/sources.list.d/$0_$$.list
-cmd apt-get update
+$cmd rm /etc/apt/sources.list.d/$(basename $0)_$$.list
+$cmd apt-get update
