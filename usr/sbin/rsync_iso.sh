@@ -1,12 +1,15 @@
 #!/bin/bash
-set -x
+#set -x
 set -e
 CD_PATH="$PWD"
 usage() {
 cat << EOF
 usage: $0 options --iso [ISO file]
 
-** This script assume you only have one USB disk plugged, USB disk will be wipe.
+**
+This script assume you only have one USB disk plugged and it can be found in file manager,
+ USB disk will be wipe.
+**
 
 This command will create a bootable usb disk by the ISO file,
 It assume the iso file in the same folder where script be executed.
@@ -50,14 +53,8 @@ do
 done
 
 [ -z "$ISO" ] && usage
-if  mount | grep "on \/ " | grep nvme; then
-    echo nvme
-    usb_list=$(mount | grep -e "sd[a-z]" | grep media | cut -d ' ' -f3)
-else
-    echo sda
-    usb_list=$(mount | grep -e "sd[b-z]" | grep media | cut -d ' ' -f3)
-fi
-if [ ! -d "$usb_list" ]; then
+usb_list=$(mount | grep udisk | awk -F'type|on' '{print $1}')
+if [ -z "$usb_list" ]; then
     echo "can not find any USB be insertted!"
     usage
 fi
@@ -70,9 +67,11 @@ if [ $(echo $list | wc -l) -gt 1 ];then
     exit
 fi
 
-target_folder="$usb_list"
+target_folder=$(mktemp -d -p .)
 echo "press any key to wipe $target_folder and create bootable usb..... "
 read
+sudo umount $usb_list
+sudo mount -t vfat -o gid=$UID,uid=$UID $usb_list $target_folder
 sudo mount -o loop $ISO $mnt_folder
 ionice -c 3 rsync --delete -avP $mnt_folder/ "$target_folder"
 #rm -rf "$target_folder"/*
