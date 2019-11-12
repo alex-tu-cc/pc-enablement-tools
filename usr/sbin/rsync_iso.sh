@@ -4,7 +4,7 @@ set -e
 CD_PATH="$PWD"
 usage() {
 cat << EOF
-usage: $0 options --iso [ISO file]
+usage: $0 options --iso [ISO file] | [file.iso]
 
 **
 This script assume you only have one USB disk plugged and it can be found in file manager,
@@ -32,7 +32,7 @@ do
         -f |--folder)
             shift
             FOLDER=$1;
-            [ -z "${FOLDER##/*}" ] && FOLDER=$CD_PATH/$FOLDER"
+            [ -z "${FOLDER##/*}" ] || [ -z "${FOLDER##~/*}" ] || FOLDER="$CD_PATH/$FOLDER"
             if [ ! -d $FOLDER ];then
                 echo "not exists $FOLDER"
                 exit 1
@@ -47,7 +47,11 @@ do
             fi
             ;;
         *)
-            usage
+            if [ -z ${i##*.iso} ]; then
+                ISO=$1
+            else
+                usage
+            fi
        esac
        shift
 done
@@ -68,7 +72,7 @@ if [ $(echo $list | wc -l) -gt 1 ];then
 fi
 
 target_folder=$(mktemp -d -p .)
-echo "press any key to wipe $target_folder and create bootable usb..... "
+echo "press any key to wipe $usb_list and create bootable usb..... "
 read
 sudo umount $usb_list
 sudo mount -t vfat -o gid=$UID,uid=$UID $usb_list $target_folder
@@ -90,6 +94,7 @@ pushd "$target_folder"
 popd
 
 sudo umount $mnt_folder
+sudo umount $target_folder
 rm -rf $mnt_folder
-[ -e $(which zenity) ] && zenity --info --text="done"
+[ -e $(which zenity) ] && zenity --info --text="$0 $ISO done"
 
