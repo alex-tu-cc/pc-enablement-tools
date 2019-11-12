@@ -1,0 +1,100 @@
+#!/bin/sh
+
+set -e
+set -x
+
+COMMAND=status
+SUITE=bionic
+ARCH=amd64
+
+if [ $# -gt 0 ]; then COMMAND=$1; shift; fi
+if [ $# -gt 0 ]; then SUITE=$1; shift; fi
+if [ $# -gt 0 ]; then ARCH=$1; shift; fi
+
+build_docker ()
+{
+  echo "Starting $USER_ubuntu-dkms_${1}_${2} ..."
+  cat <<EOF |
+FROM vicamo/ubuntu:${1}-${2}
+
+RUN apt-get update --quiet --quiet \
+	&& DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --yes \
+		aptitude \
+		bash-completion \
+		build-essential \
+		debhelper \
+		devscripts \
+		dh-modaliases \
+		dkms \
+		fakeroot \
+		git \
+		git-buildpackage \
+		gnupg \
+		less \
+		quilt \
+		software-properties-common \
+		sudo \
+		time \
+		vim
+
+RUN useradd --comment 'Local Development Account' \
+		--home $HOME --no-create-home \
+		--shell /bin/bash \
+		--uid $(id -u) \
+		$USER \
+	&& (echo "$USER:$USER" | chpasswd) \
+	&& adduser $USER sudo \
+	&& (echo "$USER ALL=NOPASSWD: ALL" > /etc/sudoers.d/$USER) \
+	&& chmod 0440 /etc/sudoers.d/$USER
+
+WORKDIR $HOME
+User $USER
+EOF
+    docker build -t $USER/local:ubuntu-dkms_${1}_${2} -
+}
+
+run_docker ()
+{
+  docker run \
+      --detach --tty \
+      --privileged \
+      --dns=8.8.8.8 \
+      --volume /home:/home \
+      --volume /work:/work \
+      --volume /srv:/srv \
+      --volume /tmp:/tmp \
+      --workdir /work/$USER \
+      --name=${USER}_ubuntu-dkms_${1}_${2} \
+      $USER/local:ubuntu-dkms_${1}_${2} \
+      /bin/bash
+}
+
+stop_docker ()
+{
+  echo "Stopping $USER_ubuntu-dkms_${1}_${2} ..."
+  docker rm -f $USER_ubuntu-dkms_${1}_${2}
+}
+
+status_docker ()
+{
+  docker inspect $USER_ubuntu-dkms_${1}_${2}
+}
+
+do_command ()
+{
+  case "$1" in
+    build|run|stop|status) ${1}_docker $2 $3; ;;
+    *) echo "Don't know what to do with command '$1'. Exit."; exit 1; ;;
+  esac
+}
+
+if [ "x${SUITE}" = "xall" ]; then
+  do_command $COMMAND trusty amd64
+  do_command $COMMAND xenial amd64
+  do_command $COMMAND bionic amd64
+  do_command $COMMAND cosmic amd64
+  do_command $COMMAND disco amd64
+  do_command $COMMAND eoan amd64
+else
+  do_command $COMMAND $SUITE $ARCH;
+fi
