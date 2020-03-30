@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -x
 set -e
 CD_PATH="$PWD"
 usage() {
@@ -17,6 +17,7 @@ options:
     -h|--help   print this message
     -f|--folder the folder you would like to copy to root of target usb disk
     -i|--iso    the iso file which be used to create a bootable USB disk.
+    -s          no interactive
 example:
 
 EOF
@@ -46,6 +47,9 @@ do
                 exit 1
             fi
             ;;
+        -s)
+            SILENCE="TRUE"
+            ;;
         *)
             if [ -z ${i##*.iso} ]; then
                 ISO=$1
@@ -57,39 +61,52 @@ do
 done
 
 [ -z "$ISO" ] && usage
-usb_list=$(mount | grep udisk | awk -F'type|on' '{print $1}')
+usb_mnt_list=$(mount | grep udisk | awk -F'type|on' '{print $1}' | sort)
+usb_list=$(echo "$usb_mnt_list"| sed 's/[1-9]//' | uniq)
 if [ -z "$usb_list" ]; then
     echo "can not find any USB be insertted!"
     usage
 fi
 
-mnt_folder=$(mktemp -d -p .)
-
-if [ $(echo $list | wc -l) -gt 1 ];then
-    echo "there are more than one usb...."
-    echo $list
+if [ $(echo $usb_list | wc -l) -gt 1 ];then
+    echo "there are more than one usb disk...."
+    echo $usb_list
     exit
+else
+    usb_target=$(echo $usb_list | tr -d "[:blank:]")
 fi
 
+echo "press any key to wipe $usb_target and create bootable usb..... "
+[ "$SILENCE" == "TRUE" ] || read
+sudo umount $usb_mnt_list
+sudo wipefs -a $usb_target 2>&1 || (echo "Wipefs failed"; usage)
+sudo parted -s $usb_target mktable msdos || (echo "parted mktable failed."; usage)
+sudo parted -s $usb_target mkpart primary  0% 100% || (echo "parted mkpart failed."; usage)
+usb_target="${usb_target}1"
+sudo mkfs.vfat -F 32  $usb_target
+
 target_folder=$(mktemp -d -p .)
-echo "press any key to wipe $usb_list and create bootable usb..... "
-read
-sudo umount $usb_list
-sudo mount -t vfat -o gid=$UID,uid=$UID $usb_list $target_folder
+sudo mount -t vfat -o gid=$UID,uid=$UID $usb_target $target_folder
+
+mnt_folder=$(mktemp -d -p .)
 sudo mount -o loop $ISO $mnt_folder
+echo "pless any keye to do ionice -c 3 rsync --delete -avP $mnt_folder/ "$target_folder""
+[ "$SILENCE" == "TRUE" ] || read
 ionice -c 3 rsync --delete -avP $mnt_folder/ "$target_folder"
 #rm -rf "$target_folder"/*
 #ionice -c 3 msrsync -p 2 -P -r "-av" $mnt_folder/ "$target_folder"
-diff -qr "$target_folder" $mnt_folder
+#diff -qr "$target_folder" $mnt_folder || echo "!!!! ERROR: diff failed !!!!"
 iso_name=$(grep "<iso" "$target_folder/bto.xml" | sed 's/<[^>]*>//g')
 project_name=$(echo $iso_name | sed 's/.*xenial-\(.*\)-X.*/\1/')
 echo ================================================================
 echo $iso_name
 echo ================================================================
-pushd "$target_folder"
+pushd "$target_folder" || exit 1
     echo $project_name | tee project
-    if [ -n $FOLDER ]; then
-        cp -r $FOLDER $target_folder
+    if [ -n "$FOLDER" ] && [ -d "$FOLDER" ]; then
+        echo "pless any keye to do ionice -c 3 rsync -avP $FOLDER/ ."
+        [ "$SILENCE" == "TRUE" ] || read
+        ionice -c 3 rsync -avP $FOLDER/ .
     fi
 popd
 
