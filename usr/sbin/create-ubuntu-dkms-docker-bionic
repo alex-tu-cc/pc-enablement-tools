@@ -13,7 +13,7 @@ if [ $# -gt 0 ]; then ARCH=$1; shift; fi
 
 build_docker ()
 {
-  echo "Starting $USER_ubuntu-dkms_${1}_${2} ..."
+  echo "Starting ${USER}_ubuntu-dkms_${1}_${2} ..."
   cat <<EOF |
 FROM vicamo/ubuntu:${1}-${2}
 
@@ -41,14 +41,14 @@ RUN useradd --comment 'Local Development Account' \
 		--home $HOME --no-create-home \
 		--shell /bin/bash \
 		--uid $(id -u) \
-		$USER \
-	&& (echo "$USER:$USER" | chpasswd) \
-	&& adduser $USER sudo \
-	&& (echo "$USER ALL=NOPASSWD: ALL" > /etc/sudoers.d/$USER) \
-	&& chmod 0440 /etc/sudoers.d/$USER
+		${USER} \
+	&& (echo "${USER}:$USER" | chpasswd) \
+	&& adduser ${USER} sudo \
+	&& (echo "${USER} ALL=NOPASSWD: ALL" > /etc/sudoers.d/$USER) \
+	&& chmod 0440 /etc/sudoers.d/${USER}
 
 WORKDIR $HOME
-User $USER
+User ${USER}
 EOF
     docker build -t $USER/local:ubuntu-dkms_${1}_${2} -
 }
@@ -71,13 +71,13 @@ run_docker ()
 
 stop_docker ()
 {
-  echo "Stopping $USER_ubuntu-dkms_${1}_${2} ..."
-  docker rm -f $USER_ubuntu-dkms_${1}_${2}
+  echo "Stopping ${USER}_ubuntu-dkms_${1}_${2} ..."
+  docker rm -f ${USER}_ubuntu-dkms_${1}_${2}
 }
 
 status_docker ()
 {
-  docker inspect $USER_ubuntu-dkms_${1}_${2}
+  docker inspect ${USER}_ubuntu-dkms_${1}_${2}
 }
 
 do_command ()
