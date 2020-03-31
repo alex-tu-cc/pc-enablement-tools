@@ -81,7 +81,7 @@ echo "press any key to wipe $usb_target and create bootable usb..... "
 sudo umount $usb_mnt_list
 sudo wipefs -a $usb_target 2>&1 || (echo "Wipefs failed"; usage)
 sudo parted -s $usb_target mktable msdos || (echo "parted mktable failed."; usage)
-sudo parted -s $usb_target mkpart primary  0% 100% || (echo "parted mkpart failed."; usage)
+sudo parted -s $usb_target mkpart primary fat32 0% 100% || (echo "parted mkpart failed."; usage)
 usb_target="${usb_target}1"
 sudo mkfs.vfat -F 32  $usb_target
 
