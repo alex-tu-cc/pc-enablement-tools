@@ -1,10 +1,12 @@
 #!/bin/bash
 set -x
-set -e
 CD_PATH="$PWD"
+JENKINS_B_NO="lastSuccessfulBuild"
 usage() {
 cat << EOF
-usage: $0 options --iso [ISO file] | [file.iso]
+usage:
+$0 options --iso [ISO file] | [file.iso] [<options to get iso from jenkins artifacts>]
+$0 options [<options to get iso from jenkins artifacts>] [-s][-f]
 
 **
 This script assume you only have one USB disk plugged and it can be found in file manager,
@@ -18,6 +20,11 @@ options:
     -f|--folder the folder you would like to copy to root of target usb disk
     -i|--iso    the iso file which be used to create a bootable USB disk.
     -s          no interactive
+
+options to get iso from jenkins artifacts:
+    --jenkins-url           The url of target Jenkins
+    --jenkins-job           The job of target Jenkins
+    --jenkins-job-number   Tthe buile number of target Jenkins job
 example:
 
 EOF
@@ -50,6 +57,18 @@ do
         -s)
             SILENCE="TRUE"
             ;;
+        --jenkins-url)
+            shift
+            JENKINS_URL="$1"
+            ;;
+        --jenkins-job)
+            shift
+            JENKINS_JOB="$1"
+            ;;
+        --jenkins-job-number)
+            shift
+            JENKINS_B_NO="$1"
+            ;;
         *)
             if [ -z ${i##*.iso} ]; then
                 ISO=$1
@@ -59,6 +78,15 @@ do
        esac
        shift
 done
+
+if [ -n "$JENKINS_URL" ] && [ -n "$JENKINS_JOB" ]; then
+    img_jenkins_out_url="ftp://$JENKINS_URL/jenkins_host/jobs/$JENKINS_JOB/builds/$JENKINS_B_NO/archive/out"
+    img_name="$(wget -q "$img_jenkins_out_url/" -O - | grep -o 'href=.*iso"' | awk -F/ '{print $NF}' | tr -d \")"
+    wget "$img_jenkins_out_url/$img_name".md5sum
+    md5sum -c "$img_name".md5sum || wget "$img_jenkins_out_url"/"$img_name"
+    md5sum -c "$img_name".md5sum || usage
+    ISO="$img_name"
+fi
 
 [ -z "$ISO" ] && usage
 usb_mnt_list=$(mount | grep udisk | awk -F'type|on' '{print $1}' | sort)
@@ -76,6 +104,9 @@ else
     usb_target=$(echo $usb_list | tr -d "[:blank:]")
 fi
 
+mnt_folder="$(mktemp -d -p "$PWD")"
+sudo mount -o loop $ISO $mnt_folder
+
 echo "press any key to wipe $usb_target and create bootable usb..... "
 [ "$SILENCE" == "TRUE" ] || read
 sudo umount $usb_mnt_list
@@ -83,13 +114,12 @@ sudo wipefs -a $usb_target 2>&1 || (echo "Wipefs failed"; usage)
 sudo parted -s $usb_target mktable msdos || (echo "parted mktable failed."; usage)
 sudo parted -s $usb_target mkpart primary  0% 100% || (echo "parted mkpart failed."; usage)
 usb_target="${usb_target}1"
+sleep 2
 sudo mkfs.vfat -F 32  $usb_target
 
-target_folder=$(mktemp -d -p .)
+target_folder="$(mktemp -d -p "$PWD")"
 sudo mount -t vfat -o gid=$UID,uid=$UID $usb_target $target_folder
 
-mnt_folder=$(mktemp -d -p .)
-sudo mount -o loop $ISO $mnt_folder
 echo "pless any keye to do ionice -c 3 rsync --delete -avP $mnt_folder/ "$target_folder""
 [ "$SILENCE" == "TRUE" ] || read
 ionice -c 3 rsync --delete -avP $mnt_folder/ "$target_folder"
